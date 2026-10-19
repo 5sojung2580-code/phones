@@ -51,4 +51,11 @@ $('resetDesign').onclick=()=>{if(confirm('현재 홈 화면 배치를 기본값�
 // Touch and pointer drag swapping for mobile.
 let dragIndex=null,dragStart=null;const dg=$('designGrid');dg.addEventListener('pointerdown',e=>{let tile=e.target.closest('.tile');if(!tile)return;dragIndex=+tile.dataset.index;dragStart={x:e.clientX,y:e.clientY};});dg.addEventListener('pointerup',e=>{if(dragIndex===null||!dragStart)return;const moved=Math.hypot(e.clientX-dragStart.x,e.clientY-dragStart.y)>15;let target=document.elementFromPoint(e.clientX,e.clientY)?.closest('.tile');if(moved&&target&&dg.contains(target)){let j=+target.dataset.index;if(j!==dragIndex){let a=draft.design.tiles;[a[dragIndex],a[j]]=[a[j],a[dragIndex]];renderDesign()}}dragIndex=null;dragStart=null});
 
-function updateLockFields(){const type=$("lockType").value;$("patternField").style.display=type==="pattern"?"block":"none";$("pinField").style.display=type==="pin"?"block":"none";}$("lockType").addEventListener("change",updateLockFields);
+function updateLockFields(){
+  const type=document.getElementById('lockType').value;
+  document.getElementById('patternField').style.display=type==='pattern'?'block':'none';
+  document.getElementById('pinField').style.display=type==='pin'?'block':'none';
+}
+document.getElementById('lockType').addEventListener('change',updateLockFields);
+document.getElementById('lockType').addEventListener('input',updateLockFields);
+updateLockFields();

@@ -5,4 +5,4 @@ const note=document.getElementById('remoteNotice');function show(t){note.textCon
 const id=new URLSearchParams(location.search).get('id');
 if(!id){show('캐릭터 링크가 필요합니다. 관리자에서 공유 링크를 생성하세요.');}
 else if(!/^[a-zA-Z0-9_-]{8,80}$/.test(id)){show('유효하지 않은 링크입니다.');}
-else {try{const snap=await getDoc(doc(db,'phones',id));if(!snap.exists()||snap.data().published!==true){show('공개되지 않았거나 존재하지 않는 휴대폰입니다.')}else{window.applyRemoteData(snap.data());}}catch(e){show('휴대폰 정보를 불러오지 못했습니다.');console.error(e)}}
+else {try{const snap=await getDoc(doc(db,'phones',id));if(!snap.exists()||snap.data().published!==true){show('공개되지 않았거나 존재하지 않는 휴대폰입니다.')}else{window.applyRemoteData(snap.data());}}catch(e){show('휴대폰 정보를 불러오지 못했습니다. ('+(e.code||'연결 오류')+')');console.error(e)}}

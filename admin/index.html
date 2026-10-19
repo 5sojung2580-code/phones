@@ -14,4 +14,12 @@
 <div class="panel" data-panel="design"><p class="muted">아이콘이나 위젯을 드래그해 위치를 교환하세요. 항목을 클릭하면 오른쪽 아래에서 수정할 수 있어요. 모든 변경은 상단 '저장 및 반영'을 눌러야 공유 링크에 반영됩니다.</p>
 <div class="design-layout"><div class="design-controls"><h3>테마</h3><div class="theme-list" id="themeChoices"></div><label>배경 색상</label><input id="designBg" type="color" style="height:46px;padding:4px"><label>배경 이미지 URL (선택)</label><input id="designWallpaper" placeholder="https://..."><h3>홈 화면 구성</h3><div class="design-actions"><button type="button" class="secondary" id="addWidget">+ 위젯 추가</button><button type="button" class="secondary" id="addApp">+ 앱 추가</button><button type="button" class="secondary" id="resetDesign">기본 배치 복원</button></div><div id="tileEditor" class="item"><p class="muted">미리보기에서 항목을 선택하세요.</p></div></div><div><div id="designPreview" class="preview-phone"><div class="preview-notch"></div><div id="designGrid" class="preview-grid"></div></div><p class="mini-note" style="text-align:center">미리보기 · 드래그로 위치 변경 · 터치 지원</p></div></div></div></div>
 <div class="card notice">보안: 이 관리자 화면은 Firebase 로그인으로 보호되고, 실제 쓰기 권한은 Firestore 규칙에서 관리자 UID로 제한됩니다. 공개된 캐릭터 데이터는 다른 사람이 읽을 수 있으므로 민감한 개인정보는 저장하지 마세요. 변경 후 반드시 <b>저장 및 반영</b>을 누르세요.</div></div></section></div></main>
-<script type="module" src="./admin.js"></script></body></html>
+<script>
+document.addEventListener('change',function(e){
+ if(e.target && e.target.id==='lockType'){
+  const t=e.target.value;
+  document.getElementById('patternField').style.display=t==='pattern'?'block':'none';
+  document.getElementById('pinField').style.display=t==='pin'?'block':'none';
+ }
+});
+</script><script type="module" src="./admin.js?v=lockfix4"></script></body></html>
