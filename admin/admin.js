@@ -1,11 +1,12 @@
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
+import {getStorage,ref as storageRef,uploadBytes,getDownloadURL} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-storage.js';
 import {getFirestore,collection,getDocs,doc,setDoc,deleteDoc} from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
 const firebaseConfig={"apiKey": "AIzaSyCqD12nwoPIBg8cROZCOTk2G4AdLuHHKVs", "authDomain": "virtual-phone-cb270.firebaseapp.com", "projectId": "virtual-phone-cb270", "storageBucket": "virtual-phone-cb270.firebasestorage.app", "messagingSenderId": "392468924659", "appId": "1:392468924659:web:e055445d84a1f478044f86"};
-const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),storage=getStorage(app);
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let records=[],current=null,draft=null,activeTab='basic';const base=new URL('../p/',location.href).href;
-const initial=()=>({name:'새 캐릭터',published:false,pattern:'12369',lockType:'pattern',pin:'1234',wallpaper:'',music:'The Song',messages:[],photos:[],contacts:[],apps:{messages:'메시지',gallery:'갤러리',phone:'전화',settings:'설정'},design:defaultDesign()});
+const initial=()=>({name:'새 캐릭터',published:false,pattern:'12369',lockType:'pattern',pin:'1234',wallpaper:'',music:'The Song',playlist:[],messages:[],photos:[],contacts:[],apps:{messages:'메시지',gallery:'갤러리',phone:'전화',settings:'설정'},design:defaultDesign()});
 const newid=()=>{let a=new Uint8Array(18);crypto.getRandomValues(a);return Array.from(a,x=>x.toString(36).padStart(2,'0')).join('')};
 function status(t){$('status').textContent=t}
 $('loginForm').onsubmit=async e=>{e.preventDefault();$('loginError').textContent='로그인 중...';try{await signInWithEmailAndPassword(auth,$('email').value,$('password').value);$('password').value=''}catch(err){$('loginError').textContent='로그인에 실패했습니다. 이메일과 비밀번호를 확인하세요.';console.error(err)}};
@@ -14,8 +15,33 @@ onAuthStateChanged(auth,async user=>{const ok=!!user;$('login').hidden=ok;$('wor
 async function load(){try{const snap=await getDocs(collection(db,'phones'));records=snap.docs.map(x=>({id:x.id,...x.data()}));list();if(current&&records.some(x=>x.id===current))select(current)}catch(e){status('데이터 읽기 실패');console.error(e);alert('Firestore 접근이 거부되었습니다. 보안 규칙의 관리자 UID를 확인하세요.')}}
 function list(){$('characters').innerHTML=records.map(x=>`<button class="character ${current===x.id?'active':''}" data-id="${esc(x.id)}">${esc(x.name)} ${x.published?'●':'○'}</button>`).join('');$('characters').querySelectorAll('button').forEach(b=>b.onclick=()=>select(b.dataset.id))}
 function select(id){const record=records.find(x=>x.id===id);if(!record)return;current=id;draft=structuredClone(record);$('editor').hidden=false;$('empty').hidden=true;$('editorTitle').textContent=record.name;$('saveStatus').textContent='';const url=base+'?id='+encodeURIComponent(id);$('shareUrl').value=url;$('preview').href=url;draw();list()}
-function draw(){ensureDesign();renderDesign();$('name').value=draft.name||'';$('pattern').value=draft.pattern||'';$('lockType').value=draft.lockType||'pattern';$('pin').value=draft.pin||'1234';updateLockFields();$('music').value=draft.music||'';$('wallpaper').value=draft.wallpaper||'';$('published').checked=!!draft.published;renderMessages();renderPhotos();renderContacts();renderApps()}
+function draw(){ensureDesign();renderDesign();$('name').value=draft.name||'';$('pattern').value=draft.pattern||'';$('lockType').value=draft.lockType||'pattern';$('pin').value=draft.pin||'1234';updateLockFields();$('music').value=draft.music||'';renderPlaylist();$('wallpaper').value=draft.wallpaper||'';$('published').checked=!!draft.published;renderMessages();renderPhotos();renderContacts();renderApps()}
 function syncBasic(){draft.name=$('name').value.trim();draft.pattern=$('pattern').value.trim();draft.lockType=$('lockType').value;draft.pin=$('pin').value.trim();draft.music=$('music').value;draft.wallpaper=$('wallpaper').value.trim();draft.published=$('published').checked}
+
+function renderPlaylist(){
+ draft.playlist??=[];
+ $('musicList').innerHTML=draft.playlist.map((t,i)=>`<div class="item"><div class="row"><strong>곡 ${i+1}</strong><button type="button" class="danger" data-track-delete="${i}">삭제</button></div><label>곡 제목</label><input data-track-title="${i}" value="${esc(t.title||'')}" placeholder="곡 제목"><label>MP3 직접 URL</label><input data-track-url="${i}" value="${esc(t.url||'')}" placeholder="https://.../song.mp3"><p class="muted">${t.source==='upload'?'업로드된 MP3':'URL 음악'} · 파일을 바꾸려면 새 곡으로 추가하세요.</p></div>`).join('');
+ $('musicList').querySelectorAll('[data-track-title]').forEach(el=>el.oninput=()=>{draft.playlist[+el.dataset.trackTitle].title=el.value});
+ $('musicList').querySelectorAll('[data-track-url]').forEach(el=>el.oninput=()=>{draft.playlist[+el.dataset.trackUrl].url=el.value.trim()});
+ $('musicList').querySelectorAll('[data-track-delete]').forEach(el=>el.onclick=()=>{draft.playlist.splice(+el.dataset.trackDelete,1);renderPlaylist()});
+}
+$('addMusicUrl').onclick=()=>{if(!draft)return;draft.playlist??=[];draft.playlist.push({title:'새 음악',url:'',source:'url'});renderPlaylist()};
+$('uploadMusic').onclick=async()=>{
+ if(!current||!draft)return;
+ const file=$('musicFile').files[0];if(!file){alert('MP3 파일을 선택하세요.');return}
+ if(!(/\.mp3$/i.test(file.name)||file.type==='audio/mpeg')){alert('MP3 파일만 업로드할 수 있습니다.');return}
+ if(file.size>20*1024*1024){alert('20MB 이하 MP3를 선택하세요.');return}
+ const button=$('uploadMusic');button.disabled=true;$('musicUploadStatus').textContent='업로드 중...';
+ try{
+  const path=`phone-music/${current}/${crypto.randomUUID()}.mp3`;
+  const r=storageRef(storage,path);
+  await uploadBytes(r,file,{contentType:'audio/mpeg'});
+  const url=await getDownloadURL(r);
+  draft.playlist??=[];draft.playlist.push({title:file.name.replace(/\.mp3$/i,''),url,source:'upload',storagePath:path});
+  renderPlaylist();$('musicFile').value='';$('musicUploadStatus').textContent='업로드 완료. 반드시 위의 저장 및 반영을 눌러 주세요.';
+ }catch(e){console.error(e);$('musicUploadStatus').textContent='업로드 실패: '+(e.code||e.message)+' (Firebase Storage 설정 및 규칙 확인)'}
+ finally{button.disabled=false}
+};
 $('newChar').onclick=async()=>{const id=newid(),value=initial();try{await setDoc(doc(db,'phones',id),value);records.unshift({id,...value});select(id);status('캐릭터 생성 완료')}catch(e){alert('생성 실패: 관리자 권한과 Firestore 규칙을 확인하세요.');console.error(e)}};
 $('save').onclick=async()=>{if(!current)return;syncBasic();if(!draft.name){alert('이름을 입력하세요.');return}if(draft.lockType==='pattern'&&(!/^[1-9]{4,9}$/.test(draft.pattern)||new Set(draft.pattern).size!==draft.pattern.length)){alert('잠금 패턴은 중복 없는 숫자 1~9로 4개 이상 입력하세요.');return}if(draft.lockType==='pin'&&!/^[0-9]{4,6}$/.test(draft.pin)){alert('숫자 암호는 4~6자리 숫자로 입력하세요.');return}try{const {id,...payload}=draft;await setDoc(doc(db,'phones',current),payload);records=records.map(r=>r.id===current?{id:current,...payload}:r);$('saveStatus').textContent='저장 완료. 공개 플레이어에 반영됐습니다.';status('저장 완료');$('editorTitle').textContent=draft.name;list()}catch(e){$('saveStatus').textContent='저장 실패: '+e.message;console.error(e)}};
 $('delete').onclick=async()=>{if(!current||!confirm('이 캐릭터를 완전히 삭제할까요?'))return;try{await deleteDoc(doc(db,'phones',current));records=records.filter(x=>x.id!==current);current=null;draft=null;$('editor').hidden=true;$('empty').hidden=false;list()}catch(e){alert('삭제 실패');console.error(e)}};
