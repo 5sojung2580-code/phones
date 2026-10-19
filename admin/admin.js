@@ -48,7 +48,87 @@ $('delete').onclick=async()=>{if(!current||!confirm('이 캐릭터를 완전히 
 $('duplicate').onclick=async()=>{if(!draft)return;syncBasic();const id=newid(),{id:old,...value}=structuredClone(draft);value.name+=' (복제)';value.published=false;try{await setDoc(doc(db,'phones',id),value);records.unshift({id,...value});select(id)}catch(e){alert('복제 실패');console.error(e)}};
 $('copyLink').onclick=async()=>{try{await navigator.clipboard.writeText($('shareUrl').value);$('saveStatus').textContent='링크 복사 완료'}catch(e){$('shareUrl').select();document.execCommand('copy')}};
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{activeTab=b.dataset.tab;document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('[data-panel]').forEach(x=>x.classList.toggle('active',x.dataset.panel===activeTab))});
-function renderMessages(){draft.messages??=[];$('messagesList').innerHTML=draft.messages.map((chat,i)=>`<div class="item"><div class="row"><input data-chat-name="${i}" value="${esc(chat.name)}" aria-label="대화 상대 이름"><button class="danger" data-remove-chat="${i}">삭제</button></div><div>${(chat.texts||[]).map((m,j)=>`<div class="row" style="margin-top:8px"><select style="width:115px" data-from="${i}:${j}"><option value="them" ${m.from==='them'?'selected':''}>상대방</option><option value="me" ${m.from==='me'?'selected':''}>나</option></select><input data-text="${i}:${j}" value="${esc(m.text)}"><button class="secondary" data-remove-text="${i}:${j}">×</button></div>`).join('')}</div><button class="secondary" data-add-text="${i}" style="margin-top:10px">+ 메시지 추가</button></div>`).join('');$('messagesList').querySelectorAll('[data-chat-name]').forEach(x=>x.oninput=()=>draft.messages[+x.dataset.chatName].name=x.value);$('messagesList').querySelectorAll('[data-text]').forEach(x=>x.oninput=()=>{const [i,j]=x.dataset.text.split(':').map(Number);draft.messages[i].texts[j].text=x.value});$('messagesList').querySelectorAll('[data-from]').forEach(x=>x.onchange=()=>{const [i,j]=x.dataset.from.split(':').map(Number);draft.messages[i].texts[j].from=x.value});$('messagesList').querySelectorAll('[data-remove-chat]').forEach(x=>x.onclick=()=>{draft.messages.splice(+x.dataset.removeChat,1);renderMessages()});$('messagesList').querySelectorAll('[data-add-text]').forEach(x=>x.onclick=()=>{draft.messages[+x.dataset.addText].texts.push({from:'them',text:''});renderMessages()});$('messagesList').querySelectorAll('[data-remove-text]').forEach(x=>x.onclick=()=>{const [i,j]=x.dataset.removeText.split(':').map(Number);draft.messages[i].texts.splice(j,1);renderMessages()})}
+
+function renderMessages() {
+  draft.messages ??= [];
+
+  $('messagesList').innerHTML = draft.messages.map((chat, i) => `
+    <div class="item">
+      <div class="row">
+        <input data-chat-name="${i}" value="${esc(chat.name)}" aria-label="대화 상대 이름">
+        <button type="button" class="secondary" data-move-chat="${i}:-1" ${i === 0 ? 'disabled' : ''}>↑</button>
+        <button type="button" class="secondary" data-move-chat="${i}:1" ${i === draft.messages.length - 1 ? 'disabled' : ''}>↓</button>
+        <button type="button" class="danger" data-remove-chat="${i}">삭제</button>
+      </div>
+      <div>
+        ${(chat.texts || []).map((m, j) => `
+          <div class="row" style="margin-top:8px">
+            <select style="width:115px" data-from="${i}:${j}">
+              <option value="them" ${m.from === 'them' ? 'selected' : ''}>상대방</option>
+              <option value="me" ${m.from === 'me' ? 'selected' : ''}>나</option>
+            </select>
+            <input data-text="${i}:${j}" value="${esc(m.text)}">
+            <button type="button" class="secondary" data-remove-text="${i}:${j}">×</button>
+          </div>
+        `).join('')}
+      </div>
+      <button type="button" class="secondary" data-add-text="${i}" style="margin-top:10px">+ 메시지 추가</button>
+    </div>
+  `).join('');
+
+  $('messagesList').querySelectorAll('[data-chat-name]').forEach(x => {
+    x.oninput = () => draft.messages[+x.dataset.chatName].name = x.value;
+  });
+
+  $('messagesList').querySelectorAll('[data-text]').forEach(x => {
+    x.oninput = () => {
+      const [i, j] = x.dataset.text.split(':').map(Number);
+      draft.messages[i].texts[j].text = x.value;
+    };
+  });
+
+  $('messagesList').querySelectorAll('[data-from]').forEach(x => {
+    x.onchange = () => {
+      const [i, j] = x.dataset.from.split(':').map(Number);
+      draft.messages[i].texts[j].from = x.value;
+    };
+  });
+
+  $('messagesList').querySelectorAll('[data-move-chat]').forEach(x => {
+    x.onclick = () => {
+      const [i, delta] = x.dataset.moveChat.split(':').map(Number);
+      const j = i + delta;
+      if (j < 0 || j >= draft.messages.length) return;
+      [draft.messages[i], draft.messages[j]] =
+        [draft.messages[j], draft.messages[i]];
+      renderMessages();
+    };
+  });
+
+  $('messagesList').querySelectorAll('[data-remove-chat]').forEach(x => {
+    x.onclick = () => {
+      draft.messages.splice(+x.dataset.removeChat, 1);
+      renderMessages();
+    };
+  });
+
+  $('messagesList').querySelectorAll('[data-add-text]').forEach(x => {
+    x.onclick = () => {
+      draft.messages[+x.dataset.addText].texts ??= [];
+      draft.messages[+x.dataset.addText].texts.push({from:'them', text:''});
+      renderMessages();
+    };
+  });
+
+  $('messagesList').querySelectorAll('[data-remove-text]').forEach(x => {
+    x.onclick = () => {
+      const [i, j] = x.dataset.removeText.split(':').map(Number);
+      draft.messages[i].texts.splice(j, 1);
+      renderMessages();
+    };
+  });
+}
+
 $('addChat').onclick=()=>{draft.messages.push({name:'새 대화',texts:[]});renderMessages()};
 function renderPhotos(){draft.photos??=[];$('photosList').innerHTML=draft.photos.map((p,i)=>`<div class="row item"><input data-photo="${i}" value="${esc(typeof p==='string'?p:p.url||'')}" placeholder="https://... 이미지 URL"><button class="danger" data-remove-photo="${i}">삭제</button></div>`).join('');$('photosList').querySelectorAll('[data-photo]').forEach(x=>x.oninput=()=>draft.photos[+x.dataset.photo]={url:x.value,caption:""});$('photosList').querySelectorAll('[data-remove-photo]').forEach(x=>x.onclick=()=>{draft.photos.splice(+x.dataset.removePhoto,1);renderPhotos()})}
 $('addPhoto').onclick=()=>{draft.photos.push({url:'',caption:''});renderPhotos()};
