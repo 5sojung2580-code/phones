@@ -12,7 +12,7 @@
   min-height:0;
   box-sizing:border-box;
   overflow:hidden;
-  padding:14px 22px 65px;
+  padding:14px 22px 12px;
 }
 
 /* 메시지 목록만 스크롤 */
@@ -37,7 +37,35 @@
   z-index:10;
   background:#fafafa;
 }
+/* 채팅 화면 내부 배치 */
+.screen:has(.chat) .appscreen{
+  display:grid;
+  grid-template-rows:auto minmax(0,1fr) auto;
+  height:100%;
+  min-height:0;
+  overflow:hidden;
+}
 
+/* 상대방 이름 */
+.screen:has(.chat) .heading{
+  grid-row:1;
+}
+
+/* 대화 내용만 스크롤 */
+.screen:has(.chat) .chat{
+  grid-row:2;
+  min-height:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+}
+
+/* 메시지 입력창 고정 */
+.screen:has(.chat) .compose{
+  grid-row:3;
+  position:relative;
+  bottom:auto;
+  margin:0;
+}
 </style></head><body><div class="phone" id="phone"><div class="speaker"></div><div class="status"><span id="statusTime">10:10</span><span>●●● ◉ ▰</span></div><main class="screen" id="screen"></main><div class="bottom" id="homebar" title="홈 화면"></div></div><script>
 const DEFAULT={name:'가상 휴대폰',pattern:'12369',lockType:'pattern',pin:'1234',wallpaper:'',wallColor:'#f5f5f5',music:'The Song',playlist:[],messages:[{name:'샬럿',texts:[{from:'them',text:'안녕. 오늘 점심 먹었어?'},{from:'me',text:'아직 못 먹었어요.'}]},{name:'알 수 없는 번호',texts:[{from:'them',text:'뭐 하고 있어?'}]}],photos:[],contacts:[{name:'테수',number:'010-1234-5678'}],apps:{messages:'메시지',gallery:'갤러리',phone:'전화',settings:'설정'},design:null};
 const audio=new Audio();audio.preload='metadata';let trackIndex=0,repeatMusic=false;
